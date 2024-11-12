@@ -33,14 +33,14 @@ public class UserRepositoryImpl implements UserRepository {
 
     @Override
     public Optional<UserData> findByUserId(Long userId) {
-        log.info("findByUserId({})", userId);
+//        log.info("findByUserId({})", userId);
         return repository.findById(userId)
                 .map(p -> toDomain(p));
     }
 
     @Override
     public UserData save (UserData data) {
-        log.info("UserRepositoryImpl.create({})", data);
+//        log.info("UserRepositoryImpl.create({})", data);
 
         User user = User.builder()
                 .passwordHash(data.getPassword())
@@ -83,11 +83,12 @@ public class UserRepositoryImpl implements UserRepository {
 
     @Override
     public void deleteById (Long id) {
+        List<UserRole> userRole = userRoleRepository.findAllByUserId(id);
+        userRoleRepository.deleteAll(userRole);
         repository.deleteById(id);
     }
 
     private UserData toDomain (User data) {
-        log.info("toDomain({})", data);
 
         List<RoleType> roles = getRoles(data);
         return UserData.builder()

@@ -6,11 +6,16 @@ import com.deloitte.demo.user.controller.dto.UserDto;
 import com.deloitte.demo.user.domain.exception.DuplicateAccountException;
 import com.deloitte.demo.user.domain.exception.InvalidPassword;
 import com.deloitte.demo.user.domain.exception.UserNotFound;
+import com.deloitte.demo.user.domain.model.RoleData;
+import com.deloitte.demo.user.domain.model.RoleType;
 import com.deloitte.demo.user.domain.model.TokenClaims;
 import com.deloitte.demo.user.domain.model.UserData;
+import com.deloitte.demo.user.domain.repository.RoleRepository;
 import com.deloitte.demo.user.domain.repository.UserRepository;
 import com.deloitte.demo.user.domain.service.AuthService;
-import com.deloitte.demo.user.domain.utils.JwtUtil;
+import com.deloitte.demo.user.domain.security.JwtConfiguration;
+import com.deloitte.demo.user.persistance.mysql.MysqlUserRoleRepository;
+import com.deloitte.demo.user.persistance.mysql.entity.UserRole;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -21,10 +26,17 @@ import java.time.LocalDateTime;
 @Slf4j
 public class AuthServiceImpl implements AuthService {
   private UserRepository userRepository;
+  private JwtConfiguration jwtConfiguration;
+  private RoleRepository roleRepository;
+  private MysqlUserRoleRepository userRoleRepository;
+
   private BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-  public AuthServiceImpl (UserRepository userRepository ) {
+  public AuthServiceImpl (UserRepository userRepository, JwtConfiguration jwtConfiguration, RoleRepository roleRepository, MysqlUserRoleRepository userRoleRepository) {
     this.userRepository = userRepository;
+    this.jwtConfiguration = jwtConfiguration;
+    this.roleRepository = roleRepository;
+    this.userRoleRepository = userRoleRepository;
   }
 
 
@@ -36,7 +48,7 @@ public class AuthServiceImpl implements AuthService {
 
     // Check if email already exists
     if (userRepository.findByEmail(userDto.getEmail()).isPresent()) {
-      throw new DuplicateAccountException("");
+      throw new DuplicateAccountException();
     }
 
     // Encrypt password
@@ -52,6 +64,12 @@ public class AuthServiceImpl implements AuthService {
         .updatedAt(LocalDateTime.now())
         .build();
     UserData response = userRepository.save(user);
+    RoleData role = roleRepository.findByRoleName(RoleType.USER)
+        .orElseThrow(() -> new UserNotFound("Role not found"));
+    userRoleRepository.save(UserRole.builder()
+        .userId(response.getId())
+        .roleId(role.getId())
+        .build());
     return Mapper.toUserDTO(response);
   }
 
@@ -66,12 +84,12 @@ public class AuthServiceImpl implements AuthService {
     }
 
     // Generate JWT token
-    return JwtUtil.generateToken(user);
+    return jwtConfiguration.generateToken(user);
   }
 
   @Override
   public TokenClaims validateToken (String token) {
-    TokenClaims tokenClaims = JwtUtil.validateToken(token);
+    TokenClaims tokenClaims = jwtConfiguration.validateToken(token);
     UserData user = userRepository.findByUsername(tokenClaims.getUsername())
         .orElseThrow(UserNotFound::new);
     tokenClaims.setRoles(user.getRoles());

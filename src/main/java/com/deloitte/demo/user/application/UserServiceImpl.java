@@ -53,7 +53,7 @@ public class UserServiceImpl implements UserService {
 
         // Check if email & username already exists
         if (userRepository.findByEmail(userDto.getEmail()).isPresent()) {
-            throw new DuplicateAccountException("");
+            throw new DuplicateAccountException();
         }
         if (userRepository.findByUsername(userDto.getUsername()).isPresent()) {
             throw new DuplicateAccountException("Username already taken");
@@ -70,7 +70,7 @@ public class UserServiceImpl implements UserService {
         UserData response = userRepository.save(user);
         return Mapper.toUserDTO(response);
     }
-
+    
     @Transactional
     public UserDto updateUser (UserDto userDto) {
 

@@ -17,4 +17,7 @@ public interface UserService {
   UserDto assignRoleToUser (Long userId, String role);
 
   UserDto updateUser (UserDto user);
+
+  boolean isCurrentUser (Long userId);
+
 }

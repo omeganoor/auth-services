@@ -6,6 +6,10 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 @ResponseStatus(HttpStatus.CONFLICT)
 public class DuplicateAccountException extends EmptyStackTrace {
     public DuplicateAccountException (String message) {
-        super(message.isEmpty() ? "account with this username or email is already exist" : message);
+        super(message);
+    }
+
+    public DuplicateAccountException(){
+        super("account with this username or email is already exist");
     }
 }

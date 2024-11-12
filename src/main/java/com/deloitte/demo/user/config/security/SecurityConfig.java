@@ -26,22 +26,31 @@ import java.util.Collections;
 @Slf4j
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
-	@Autowired
-	private SecurityFilter authorizationFilter;
+	private final SecurityFilter authorizationFilter;
 
 	@Value("${allowed.origins}")
 	private String allowedOrigins;
 
+	public SecurityConfig (SecurityFilter authorizationFilter) {
+		this.authorizationFilter = authorizationFilter;
+	}
+
 	@Override
 	protected void configure(HttpSecurity http) throws Exception {
+		String accountEndpoint = "/account/**";
 		http.cors()
 				.and().authorizeRequests()
 				.and().csrf().disable()
 				.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
 				.and().authorizeRequests()
-				.mvcMatchers( "/actuator/**", "/auth/**","/account/**").permitAll()
-//				.antMatchers("/account/**").hasAnyRole("ADMIN", "USER")
-			.anyRequest().authenticated()
+				.mvcMatchers( "/actuator/**", "/auth/**").permitAll()
+				.mvcMatchers(HttpMethod.GET, accountEndpoint).hasAnyRole("USER")
+				.mvcMatchers(HttpMethod.POST, accountEndpoint).hasAnyRole("ROOT","ADMIN")
+				.mvcMatchers(HttpMethod.PUT,  "/account/update/**").hasAnyRole("ROOT", "ADMIN", "USER")
+				.mvcMatchers(HttpMethod.PUT, accountEndpoint).hasAnyRole("ROOT", "ADMIN")
+				.mvcMatchers(HttpMethod.DELETE, accountEndpoint).hasAnyRole("ROOT", "ADMIN" )
+				.anyRequest().authenticated()
+
 			.and()
 			.addFilterBefore(authorizationFilter, UsernamePasswordAuthenticationFilter.class);
 	}
@@ -53,6 +62,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 		CorsConfiguration configuration = new CorsConfiguration();
 		configuration.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
 		configuration.setAllowedMethods(Arrays.asList("GET","POST","PUT","DELETE","OPTIONS"));
+		configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
 		configuration.setAllowedHeaders(Collections.singletonList("*"));
 		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 		source.registerCorsConfiguration("/**", configuration);

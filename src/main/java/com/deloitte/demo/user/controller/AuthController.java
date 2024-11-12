@@ -6,6 +6,8 @@ import com.deloitte.demo.user.controller.dto.UserDto;
 import com.deloitte.demo.user.domain.model.TokenClaims;
 import com.deloitte.demo.user.domain.service.AuthService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -37,7 +39,12 @@ public class AuthController {
 
   // validate JWT token
   @GetMapping("/validate")
-  public ResponseDto validateToken (@RequestParam String token) {
+  public ResponseDto validateToken (@RequestHeader("Authorization") String authorizationHeader) {
+    if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+      return ResponseDto.error(HttpStatus.BAD_REQUEST.value(), "Invalid authorization header");
+    }
+
+    String token = authorizationHeader.substring(7);
     TokenClaims claims = authService.validateToken(token);
     return ResponseDto.success(claims);
   }
